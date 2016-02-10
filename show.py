@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-from ljtserver.analysis import DenStream
-
+from __future__ import print_function
+from ljtserver.analysis import DenStream, DenPoint
 import pygame
 import sys
 import random
@@ -16,7 +16,7 @@ speed = [2, 2]
 black = 0, 0, 0
 screen = pygame.display.set_mode(size)
 paused = False
-d = DenStream(20, 30, )
+jiggle = 0.001
 
 
 class Ball(object):
@@ -33,6 +33,13 @@ def show_point(x, y, color):
     pygame.draw.circle(screen, color, map(int, (x, y)), 3)
 
 balls = [Ball(100), Ball(700), Ball(500), Ball(200)]
+
+from collections import namedtuple
+
+trips = []
+for i, arr in enumerate(np.concatenate([b.points for b in balls])):
+    trips.append(DenPoint(i, 0, arr))
+d = DenStream(40, 10, trips)
 try:
     while 1:
         for e in pygame.event.get():
@@ -46,14 +53,16 @@ try:
                 ball.points += (ball.velocity[0] * math.cos(ball.velocity[1]),
                                 ball.velocity[0] * math.sin(ball.velocity[1]))
                 # give them a bit of ijggle
-                ball.points *= np.random.uniform(0.998, 1.002, ball.points.shape)
+                ball.points *= np.random.uniform(1 - jiggle, 1 + jiggle, ball.points.shape)
                 for x, y in ball.points:
                     show_point(x, y, ball.color)
                 means = np.mean(ball.points, 0)
                 if not (0 < means[1] < height) or not (0 < means[0] < width):
                     ball.velocity[1] -= random.uniform(3*math.pi / 4, 5 * math.pi/4)
+            for cluster in d.p_micro_clusters:
+                pygame.draw.circle(screen, (255,255,255), cluster.center(), cluster.radius(), 2)
         pygame.display.flip()
         fpsClock.tick(FPS)
-except KeyboardInterrupt, e:
+except (KeyboardInterrupt, e):
     print("Bye")
     sys.exit()
